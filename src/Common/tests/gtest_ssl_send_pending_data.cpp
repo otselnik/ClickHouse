@@ -29,6 +29,8 @@
 namespace
 {
 
+/// This custom `BIO` makes every TLS write fail as if the underlying socket was reset.
+/// It is installed as the write `BIO` only, so the real read `BIO` and buffered application data remain intact.
 int resetWrite(BIO * bio, const char *, int)
 {
     BIO_clear_retry_flags(bio);
@@ -57,6 +59,8 @@ int resetDestroy(BIO *)
 
 const BIO_METHOD * resetWriteBioMethod()
 {
+    /// `SSL_set0_wbio` transfers ownership of the `BIO` to `SSL`, so the method must support its full lifetime.
+    /// A successful flush also lets OpenSSL perform routine `BIO` housekeeping without obscuring the write failure.
     static const BIO_METHOD * method = []
     {
         BIO_METHOD * result = BIO_meth_new(BIO_get_new_index() | BIO_TYPE_SOURCE_SINK, "reset-write");
@@ -113,11 +117,17 @@ TEST(SSLSocketError, SendFailureDoesNotConsumePendingApplicationData)
 
     SSL * ssl = client_impl->ssl();
     ASSERT_NE(ssl, nullptr);
+
+    /// The failing write `BIO` installed below would also reject a TLS shutdown write. Mark shutdown as complete
+    /// during scope cleanup, while still letting `SSL` own and destroy the failing `BIO`.
     SCOPE_EXIT(SSL_set_shutdown(ssl, SSL_SENT_SHUTDOWN | SSL_RECEIVED_SHUTDOWN));
 
+    /// `SSL_peek` processes the incoming TLS record without consuming its first application-data byte.
+    /// Because the server sends the payload in one call, the complete payload must then be visible in `SSL_pending`.
     char first_byte = 0;
     const int peek_result = SSL_peek(ssl, &first_byte, 1);
 
+    /// Wait until the server has completed its single write and propagate any server-side exception.
     server_thread.join();
     if (server_exception)
         std::rethrow_exception(server_exception);
@@ -127,10 +137,15 @@ TEST(SSLSocketError, SendFailureDoesNotConsumePendingApplicationData)
     const int pending_before_send = SSL_pending(ssl);
     ASSERT_EQ(pending_before_send, static_cast<int>(payload.size()));
 
+    /// Replace only the write `BIO`. The read `BIO` and application data already buffered by `SSL` are preserved,
+    /// and `SSL_set0_wbio` transfers ownership of the failing `BIO` to `SSL`.
     BIO * reset_write_bio = BIO_new(resetWriteBioMethod());
     ASSERT_NE(reset_write_bio, nullptr);
     SSL_set0_wbio(ssl, reset_write_bio);
 
+    /// OpenSSL requires the current thread's error queue to be empty before TLS I/O so that `SSL_get_error`
+    /// classifies this `SSL_write` result rather than an earlier error. Check the exact exception type because
+    /// the removed workaround also changed a connection reset into an `SSLException`.
     ERR_clear_error();
     errno = 0;
     const char byte_to_send = 'x';
@@ -152,6 +167,8 @@ TEST(SSLSocketError, SendFailureDoesNotConsumePendingApplicationData)
         ADD_FAILURE() << "Expected Poco::Net::ConnectionResetException, got a non-Poco exception";
     }
 
+    /// Previously `SecureSocketImpl::sendBytes` called `SSL_read` after this write failure, silently consuming
+    /// one pending application-data byte. Handling the write error must leave all incoming data untouched.
     EXPECT_EQ(SSL_pending(ssl), pending_before_send);
 }
 
