@@ -280,7 +280,7 @@ public:
     void throwIfKilled();
 
     /// Returns true for the original exception passed to `cancelQuery` or a private copy propagated
-    /// to a query thread. A `TIMEOUT` produces a new `TIMEOUT_EXCEEDED` exception instead.
+    /// to a query thread, including a `TIMEOUT_EXCEEDED` exception generated for a `TIMEOUT` cancellation.
     bool isStoredCancellationException(const std::exception_ptr & exception) const;
 
     /// Returns an entry in the ProcessList associated with this QueryStatus. The function can return nullptr.

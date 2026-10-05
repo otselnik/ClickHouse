@@ -78,12 +78,61 @@ TEST(QueryCancellationException, StandardCodesWithoutQuery)
     {
         ASSERT_FALSE(CurrentThread::isInitialized());
         EXPECT_FALSE(CurrentThread::isQueryCancellationException(customException()));
-        for (int code : {ErrorCodes::QUERY_WAS_CANCELLED, ErrorCodes::QUERY_WAS_CANCELLED_BY_CLIENT, ErrorCodes::TIMEOUT_EXCEEDED})
+        for (int code : {ErrorCodes::QUERY_WAS_CANCELLED, ErrorCodes::QUERY_WAS_CANCELLED_BY_CLIENT})
         {
             auto exception = std::make_exception_ptr(Exception(code, "Cancellation"));
             EXPECT_TRUE(CurrentThread::isQueryCancellationException(exception));
             QueryCancellationBlockerInThread blocker;
             EXPECT_TRUE(CurrentThread::isQueryCancellationException(exception));
+        }
+    }).get();
+}
+
+TEST(QueryCancellationException, OperationTimeoutWithoutQuery)
+{
+    std::async(std::launch::async, []
+    {
+        ASSERT_FALSE(CurrentThread::isInitialized());
+        auto timeout = std::make_exception_ptr(Exception(ErrorCodes::TIMEOUT_EXCEEDED, "Operation timed out"));
+        EXPECT_FALSE(CurrentThread::isQueryCancellationException(timeout));
+        QueryCancellationBlockerInThread blocker;
+        EXPECT_FALSE(CurrentThread::isQueryCancellationException(timeout));
+    }).get();
+}
+
+TEST(QueryCancellationException, OperationTimeoutRacingWithQueryTimeout)
+{
+    std::async(std::launch::async, []
+    {
+        ThreadStatus thread_status;
+        Query query;
+        auto group = std::make_shared<ThreadGroup>(query.context, 0);
+        ThreadGroupSwitcher switcher(group, ThreadName::REMOTE_FS_READ_THREAD_POOL);
+
+        try
+        {
+            throw Exception(ErrorCodes::TIMEOUT_EXCEEDED, "Operation timed out");
+        }
+        catch (...)
+        {
+            auto operation_timeout = std::current_exception();
+            EXPECT_FALSE(CurrentThread::isQueryCancellationException(operation_timeout));
+
+            query.status->cancelQuery(CancelReason::TIMEOUT);
+            auto query_timeout = thrownCancellation();
+            ASSERT_NE(query_timeout, nullptr);
+            EXPECT_EQ(getExceptionErrorCode(query_timeout), ErrorCodes::TIMEOUT_EXCEEDED);
+            EXPECT_TRUE(query.status->isStoredCancellationException(query_timeout));
+            EXPECT_TRUE(CurrentThread::isQueryCancellationException(query_timeout));
+            EXPECT_FALSE(query.status->isStoredCancellationException(operation_timeout));
+            EXPECT_FALSE(CurrentThread::isQueryCancellationException(operation_timeout));
+            EXPECT_EQ(std::current_exception(), operation_timeout);
+
+            auto next_query_timeout = thrownCancellation();
+            ASSERT_NE(next_query_timeout, nullptr);
+            EXPECT_NE(next_query_timeout, query_timeout);
+            EXPECT_TRUE(CurrentThread::isQueryCancellationException(next_query_timeout));
+            EXPECT_TRUE(CurrentThread::isQueryCancellationException(query_timeout));
         }
     }).get();
 }

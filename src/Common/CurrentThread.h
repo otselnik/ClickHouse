@@ -116,8 +116,8 @@ public:
     /// stored by `QueryStatus::cancelQuery`) if it has been cancelled. No-op otherwise.
     static void checkIfNotCancelled();
 
-    /// Returns true for a standard query cancellation exception or an exception propagated from
-    /// the one passed to `QueryStatus::cancelQuery`. Tracking provenance preserves an unrelated
+    /// Returns true for an explicit query cancellation code or an exception propagated by
+    /// `QueryStatus`, including query timeouts. Tracking provenance preserves an unrelated
     /// error if cancellation races with exception unwinding.
     static bool isQueryCancellationException(const std::exception_ptr & exception);
 

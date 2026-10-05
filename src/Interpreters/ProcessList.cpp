@@ -680,11 +680,15 @@ void QueryStatus::throwProperExceptionIfNeeded(const UInt64 & max_execution_time
                 additional_error_part = fmt::format("elapsed {:.3f} ms, ", static_cast<double>(elapsed_ns) / 1000000ULL);
 
             if (cancel_reason == CancelReason::TIMEOUT)
-                throw Exception(
+            {
+                auto exception = std::make_exception_ptr(Exception(
                     ErrorCodes::TIMEOUT_EXCEEDED,
                     "Timeout exceeded: {}maximum: {:.3f} ms",
                     additional_error_part,
-                    static_cast<double>(max_execution_time_us) / 1000);
+                    static_cast<double>(max_execution_time_us) / 1000));
+                cancellation_exception_instances.push_back(exception);
+                std::rethrow_exception(exception);
+            }
             throwQueryWasCancelled();
         }
     }
@@ -750,7 +754,7 @@ void QueryStatus::throwIfKilled()
 bool QueryStatus::isStoredCancellationException(const std::exception_ptr & exception) const
 {
     std::lock_guard lock(cancel_mutex);
-    if (!is_killed || cancel_reason == CancelReason::TIMEOUT)
+    if (!is_killed)
         return false;
 
     for (const auto & cancellation_exception_instance : cancellation_exception_instances)

@@ -21,7 +21,6 @@ namespace ErrorCodes
     extern const int LOGICAL_ERROR;
     extern const int QUERY_WAS_CANCELLED;
     extern const int QUERY_WAS_CANCELLED_BY_CLIENT;
-    extern const int TIMEOUT_EXCEEDED;
 }
 
 void CurrentThread::updatePerformanceCounters()
@@ -138,8 +137,7 @@ bool CurrentThread::isQueryCancellationException(const std::exception_ptr & exce
 {
     const auto code = getExceptionErrorCode(exception);
     if (code == ErrorCodes::QUERY_WAS_CANCELLED
-        || code == ErrorCodes::QUERY_WAS_CANCELLED_BY_CLIENT
-        || code == ErrorCodes::TIMEOUT_EXCEEDED)
+        || code == ErrorCodes::QUERY_WAS_CANCELLED_BY_CLIENT)
         return true;
 
     if (QueryCancellationBlockerInThread::isBlocked())
