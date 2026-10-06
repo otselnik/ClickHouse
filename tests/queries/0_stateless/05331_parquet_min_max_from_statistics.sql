@@ -36,6 +36,12 @@ DROP TABLE IF EXISTS t_05331_default;
 CREATE TABLE t_05331_default (i UInt64, x Int64 DEFAULT 42) ENGINE = File(Parquet);
 INSERT INTO t_05331_default (i) SELECT number FROM numbers(1000);
 
+DROP TABLE IF EXISTS t_05331_policy;
+CREATE TABLE t_05331_policy (i UInt64) ENGINE = File(Parquet);
+INSERT INTO t_05331_policy SELECT number FROM numbers(1000);
+DROP ROW POLICY IF EXISTS p_05331 ON t_05331_policy;
+CREATE ROW POLICY p_05331 ON t_05331_policy USING i >= 100 AND i < 900 TO ALL;
+
 SET optimize_min_max_from_files = 1;
 
 -- Answered from the statistics.
@@ -71,6 +77,7 @@ SELECT min(i), count() FROM file(currentDatabase() || '_05331_1.parquet') SETTIN
 SELECT minIf(i, s > 0), max(i) FROM file(currentDatabase() || '_05331_1.parquet') SETTINGS log_comment = '05331-min_if';
 SELECT min(i), max(i) FROM file(currentDatabase() || '_05331_1.parquet') SETTINGS aggregate_functions_null_for_empty = 1, log_comment = '05331-null_for_empty';
 SELECT min(i), max(i) FROM (SELECT i, arrayJoin(if(i >= 5000, [1], [])) AS z FROM file(currentDatabase() || '_05331_1.parquet')) SETTINGS query_plan_lower_array_join_function = 0, log_comment = '05331-array_join';
+SELECT min(i), max(i) FROM t_05331_policy SETTINGS log_comment = '05331-row_policy';
 SELECT min(i), max(i) FROM file(currentDatabase() || '_05331_1.parquet') SETTINGS optimize_min_max_from_files = 0, log_comment = '05331-disabled';
 
 SELECT min(i), max(i) FROM fileCluster('test_cluster_two_shards_localhost', currentDatabase() || '_05331_{1,2}.parquet') SETTINGS log_comment = '05331-file_cluster';
@@ -88,4 +95,6 @@ WHERE type = 'QueryFinish' AND NOT is_initial_query AND initial_query_id IN (
     SELECT query_id FROM system.query_log
     WHERE current_database = currentDatabase() AND type = 'QueryFinish' AND log_comment = '05331-file_cluster');
 
+DROP ROW POLICY p_05331 ON t_05331_policy;
+DROP TABLE t_05331_policy;
 DROP TABLE t_05331_default;

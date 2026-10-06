@@ -27,6 +27,7 @@ true	1	9999
 5001	9999
 0	9999
 5000	9999
+100	899
 0	9999
 0	20099
 05331-ints	1
@@ -57,6 +58,7 @@ true	1	9999
 05331-min_if	0
 05331-null_for_empty	0
 05331-array_join	0
+05331-row_policy	0
 05331-disabled	0
 05331-file_cluster	0
 2
