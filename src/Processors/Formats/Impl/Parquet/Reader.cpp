@@ -527,6 +527,10 @@ std::optional<Chunk> Reader::readMinMaxFromStatistics(const std::optional<std::u
         const PrimitiveColumnInfo & column_info = primitive_columns.at(output_info.primitive_start);
         if (!column_info.decoder.allow_stats || column_info.levels.back().rep > 0)
             return std::nullopt;
+        /// Without the `TYPE_ORDER` column order, `min_value` / `max_value` have no defined meaning (parquet.thrift).
+        if (!file_metadata.__isset.column_orders || column_info.column_idx >= file_metadata.column_orders.size()
+            || !file_metadata.column_orders[column_info.column_idx].__isset.TYPE_ORDER)
+            return std::nullopt;
 
         /// Statistics of these types are the exact extremes in `min` / `max` order; strings may be truncated, floats
         /// omit `nan`, and `Bool` statistics can hold integers above 1.
@@ -608,8 +612,10 @@ std::optional<Chunk> Reader::readMinMaxFromStatistics(const std::optional<std::u
                     return std::nullopt;
                 Field left = tryConvertFieldToType(range.left, output_type, /*from_type_hint=*/ nullptr, /*format_settings=*/ {}, /*strict=*/ true);
                 Field right = tryConvertFieldToType(range.right, output_type, /*from_type_hint=*/ nullptr, /*format_settings=*/ {}, /*strict=*/ true);
-                if (left.isNull() || right.isNull() || accurateLess(right, left))
+                if (left.isNull() || right.isNull())
                     return std::nullopt;
+                if (accurateLess(right, left))
+                    throw Exception(ErrorCodes::INCORRECT_DATA, "Statistics have min_value > max_value: {} > {}.", left, right);
 
                 if (mins[i].isNull() || accurateLess(left, mins[i]))
                     mins[i] = std::move(left);

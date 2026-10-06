@@ -225,6 +225,7 @@ void ParquetV3BlockInputFormat::resetParser()
     {
         std::lock_guard lock(reader_mutex);
         reader.reset();
+        min_max_from_statistics = false;
     }
     previous_block_missing_values.clear();
     IInputFormat::resetParser();

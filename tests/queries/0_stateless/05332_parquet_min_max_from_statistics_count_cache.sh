@@ -32,9 +32,11 @@ touch -d '1 hour ago' "${DIR}/a.parquet" "${DIR}/b.parquet" "${DIR}/c.parquet"
 # The min/max reads and the counts run in one process, so they share the cache.
 "${LOCAL[@]}" --query "
     SELECT min(x), max(x) FROM file('${DIR}/a.parquet', Parquet);
+    SELECT value FROM system.events WHERE event = 'ParquetReadMinMaxFromStatistics';
     SELECT count() FROM file('${DIR}/a.parquet', Parquet);
     SELECT count() FROM file('${DIR}/a.parquet', Parquet) SETTINGS use_cache_for_count_from_files = 0;
     SELECT min(x), max(x) FROM file('${DIR}/{a,b,c}.parquet', Parquet);
+    SELECT value FROM system.events WHERE event = 'ParquetReadMinMaxFromStatistics';
     SELECT _file, count() FROM file('${DIR}/{a,b,c}.parquet', Parquet) GROUP BY _file ORDER BY _file;
     SELECT _file, count() FROM file('${DIR}/{a,b,c}.parquet', Parquet) GROUP BY _file ORDER BY _file
     SETTINGS use_cache_for_count_from_files = 0;
