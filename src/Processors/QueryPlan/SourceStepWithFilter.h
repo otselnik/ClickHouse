@@ -78,8 +78,7 @@ public:
     virtual bool supportsTopKDynamicFilter(const ColumnWithTypeAndName & /*sort_column*/) const { return false; }
     virtual void setTopKFilter(std::shared_ptr<const FormatTopKFilterInfo> /*info*/) {}
 
-    /// `tryMinMaxFromFormatStatistics`: the whole output is consumed only by `min` / `max`, so the source
-    /// may return any rows with the same per-column minimum and maximum (e.g. built from file statistics).
+    /// The whole output is consumed only by `min` / `max` (see `FormatFilterInfo::min_max_from_statistics`).
     virtual bool supportsMinMaxFromStatistics() const { return false; }
     virtual void setMinMaxFromStatistics() {}
 

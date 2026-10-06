@@ -149,7 +149,6 @@ Chunk ParquetV3BlockInputFormat::read()
     initializeIfNeeded();
     if (reader->reader.min_max_chunk.has_value())
     {
-        /// `min` / `max` from column chunk statistics: the reader has no row groups to read after it.
         Chunk chunk = std::move(*reader->reader.min_max_chunk);
         reader->reader.min_max_chunk.reset();
         min_max_from_statistics = true;

@@ -243,8 +243,7 @@ size_t tryPushHavingPrefilterIntoAggregation(QueryPlan::Node * parent_node, Quer
 /// the preserved-side input must produce before joining.
 size_t tryTopKThroughJoin(QueryPlan::Node * parent_node, QueryPlan::Nodes & nodes, const Optimization::ExtraSettings & settings);
 
-/// `min` / `max` of the columns of a format source (e.g. a Parquet file) without keys and filters:
-/// let the source answer them from data format statistics instead of reading the data.
+/// Let a format source answer key-less, unfiltered `min` / `max` of its columns from format statistics.
 size_t tryMinMaxFromFormatStatistics(QueryPlan::Node * parent_node, QueryPlan::Nodes & nodes, const Optimization::ExtraSettings & settings);
 
 inline const auto & getOptimizations()

@@ -85,8 +85,7 @@ private:
     std::optional<Parquet::ReadManager> reader;
     bool reported_count = false; // if need_only_count
 
-    /// The rows were replaced by the minimum and the maximum from column chunk statistics (see
-    /// `FormatFilterInfo::min_max_from_statistics`); no row groups were read.
+    /// The rows were replaced by min / max from column chunk statistics; no row groups were read.
     bool min_max_from_statistics = false;
 
     BlockMissingValues previous_block_missing_values;

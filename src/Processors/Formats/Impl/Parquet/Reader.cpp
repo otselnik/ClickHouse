@@ -543,7 +543,6 @@ std::optional<Chunk> Reader::readMinMaxFromStatistics(const std::optional<std::u
         columns_info[i] = &column_info;
     }
 
-    /// A Null field: no value seen yet.
     std::vector<Field> mins(num_columns);
     std::vector<Field> maxs(num_columns);
     bool has_rows = false;
@@ -565,8 +564,7 @@ std::optional<Chunk> Reader::readMinMaxFromStatistics(const std::optional<std::u
             const auto & statistics = column_meta.statistics;
             const IDataType & output_type = *sample_block->getByPosition(i).type;
 
-            /// The statistics describe the non-null values only. `min` and `max` ignore NULLs, but a
-            /// null read into a non-`Nullable` column becomes a value (or an error).
+            /// Statistics describe non-null values only, but a null read into a non-`Nullable` column becomes a value.
             if (column_info.levels.back().def > 0)
             {
                 if (!statistics.__isset.null_count || statistics.null_count < 0 || statistics.null_count > meta.num_rows)
@@ -580,8 +578,7 @@ std::optional<Chunk> Reader::readMinMaxFromStatistics(const std::optional<std::u
             if (!statistics.__isset.min_value || !statistics.__isset.max_value)
                 return std::nullopt;
 
-            /// Bounds may be inexact (parquet.thrift): fixed-width integers are exact unless flagged
-            /// otherwise, binary-encoded values (decimals) only if flagged exact.
+            /// Bounds may be inexact: fixed-width integers are exact unless flagged otherwise, binary values only if flagged exact.
             switch (column_info.decoder.physical_type)
             {
                 case parq::Type::BOOLEAN:
@@ -603,8 +600,7 @@ std::optional<Chunk> Reader::readMinMaxFromStatistics(const std::optional<std::u
 
             try
             {
-                /// As in `getTopKSortColumnRange`: both bounds must be exactly representable in the output type, so that
-                /// the conversion of the column to that type moves no value between them.
+                /// Both bounds must be exactly representable in the output type, so the conversion moves no value across them.
                 Range range = Range::createWholeUniverse();
                 column_info.decoder.decodeField(statistics.min_value, /*is_max=*/ false, *column_info.decoded_type, output_type, range.left);
                 column_info.decoder.decodeField(statistics.max_value, /*is_max=*/ true, *column_info.decoded_type, output_type, range.right);
@@ -904,7 +900,7 @@ void Reader::prefilterAndInitRowGroups(const std::optional<std::unordered_set<UI
     {
         min_max_chunk = readMinMaxFromStatistics(row_groups_to_read);
         if (min_max_chunk.has_value())
-            return; /// The rows are not read: no row groups.
+            return;
     }
 
     if (format_filter_info->key_condition)

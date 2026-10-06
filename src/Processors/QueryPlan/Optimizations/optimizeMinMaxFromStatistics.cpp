@@ -8,8 +8,6 @@
 namespace DB::QueryPlanOptimizations
 {
 
-/// `SELECT min(x), max(y) FROM file('data.parquet')`: if the only aggregates are `min` / `max` of source columns, with
-/// no keys and nothing in between that removes rows, the source may answer them from format statistics.
 size_t tryMinMaxFromFormatStatistics(QueryPlan::Node * parent_node, QueryPlan::Nodes & /*nodes*/, const Optimization::ExtraSettings & /*settings*/)
 {
     const auto * aggregating = typeid_cast<const AggregatingStep *>(parent_node->step.get());
@@ -29,7 +27,6 @@ size_t tryMinMaxFromFormatStatistics(QueryPlan::Node * parent_node, QueryPlan::N
         arguments.insert(aggregate.argument_names.front());
     }
 
-    /// Only expressions that pass the columns of the source through, possibly renamed, may be in between.
     QueryPlan::Node * node = parent_node->children.front();
     while (const auto * expression = typeid_cast<const ExpressionStep *>(node->step.get()))
     {
