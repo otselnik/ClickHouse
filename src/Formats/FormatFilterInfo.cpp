@@ -98,7 +98,9 @@ FormatFilterInfo::FormatFilterInfo() = default;
 
 bool FormatFilterInfo::hasFilter() const
 {
-    return filter_actions_dag != nullptr;
+    /// Whether the format may return other rows than all rows of the file, so that their number must not be cached
+    /// as the number of rows in the file. With `min_max_from_statistics` it may return rows built from statistics.
+    return filter_actions_dag != nullptr || min_max_from_statistics;
 }
 
 namespace

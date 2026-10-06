@@ -409,6 +409,10 @@ public:
     bool supportsTopKDynamicFilter(const ColumnWithTypeAndName & sort_column) const override;
     void setTopKFilter(std::shared_ptr<const FormatTopKFilterInfo> info_) override { top_k_filter = std::move(info_); }
 
+    /// MIN/MAX from statistics: only the Parquet reader consumes `FormatFilterInfo::min_max_from_statistics`.
+    bool supportsMinMaxFromStatistics() const override;
+    void setMinMaxFromStatistics() override { read_min_max_from_statistics = true; }
+
     ReadFromFile(
         const Names & column_names_,
         const SelectQueryInfo & query_info_,
@@ -451,6 +455,7 @@ private:
 
     std::shared_ptr<StorageFileSource::FilesIterator> files_iterator;
     std::shared_ptr<const FormatTopKFilterInfo> top_k_filter;
+    bool read_min_max_from_statistics = false;
 
     /// Lazy materialization: set iff keepOnlyRequiredColumnsAndCreateLazyReadStep was called.
     LazyFileRegistryPtr lazy_row_index_registry;
