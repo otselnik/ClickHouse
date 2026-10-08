@@ -42,7 +42,7 @@ namespace ErrorCodes
 }
 
 /// Point-in-polygon tests overflow Float64 for larger coordinates and return wrong results.
-inline constexpr Float64 max_abs_polygon_coordinate = 1e100;
+inline constexpr Float64 max_abs_polygon_coordinate = 1e150;
 
 [[noreturn]] inline void throwPolygonCoordinateIsTooLarge()
 {
