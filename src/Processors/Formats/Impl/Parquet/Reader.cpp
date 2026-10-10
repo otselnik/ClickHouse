@@ -538,10 +538,11 @@ std::optional<Chunk> Reader::readMinMaxFromStatistics(const std::optional<std::u
             return std::nullopt;
 
         /// Statistics of these types are the exact extremes in `min` / `max` order; strings may be truncated, floats
-        /// omit `nan`, and `Bool` statistics can hold integers above 1.
+        /// omit `nan`, and `Bool` or physical `BOOLEAN` statistics can hold integers above 1.
         const DataTypePtr type = removeNullable(sample_block->getByPosition(i).type);
         const WhichDataType which(type);
-        if (isBool(type) || !(which.isNativeInt() || which.isNativeUInt() || which.isDate() || which.isDate32()
+        if (isBool(type) || column_info.decoder.physical_type == parq::Type::BOOLEAN
+            || !(which.isNativeInt() || which.isNativeUInt() || which.isDate() || which.isDate32()
                 || which.isDateTime() || which.isDateTime64() || which.isDecimal()))
             return std::nullopt;
 
@@ -586,7 +587,6 @@ std::optional<Chunk> Reader::readMinMaxFromStatistics(const std::optional<std::u
             /// Bounds may be inexact: fixed-width integers are exact unless flagged otherwise, binary values only if flagged exact.
             switch (column_info.decoder.physical_type)
             {
-                case parq::Type::BOOLEAN:
                 case parq::Type::INT32:
                 case parq::Type::INT64:
                     if ((statistics.__isset.is_min_value_exact && !statistics.is_min_value_exact)

@@ -62,6 +62,7 @@ SELECT min(str), max(str) FROM file(currentDatabase() || '_05331_1.parquet') SET
 SELECT min(f), max(f) FROM file(currentDatabase() || '_05331_1.parquet') SETTINGS log_comment = '05331-float_nan';
 SELECT min(b), max(b) FROM file(currentDatabase() || '_05331_1.parquet') SETTINGS log_comment = '05331-bool';
 SELECT min(u8), max(u8) FROM file(currentDatabase() || '_05331_1.parquet', Parquet, 'u8 Bool') SETTINGS log_comment = '05331-uint8_as_bool';
+SELECT min(b), max(b) FROM file(currentDatabase() || '_05331_1.parquet', Parquet, 'b UInt8') SETTINGS log_comment = '05331-bool_as_uint8';
 SELECT min(neg), max(neg) FROM file(currentDatabase() || '_05331_1.parquet', Parquet, 'neg UInt64') SETTINGS log_comment = '05331-int64_as_uint64';
 SELECT min(big), max(big) FROM file(currentDatabase() || '_05331_1.parquet', Parquet, 'big Int64') SETTINGS log_comment = '05331-uint64_as_int64';
 SELECT min(i), max(i) FROM file(currentDatabase() || '_05331_1.parquet', Parquet, 'i UInt8') SETTINGS log_comment = '05331-narrow';
